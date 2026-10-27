@@ -1,0 +1,78 @@
+# BACKEND: Django + PostgreSQL + Redis. Frontend repo (game_next_git) dan mustaqil deploy qilinadi.
+# db va redis faqat ichki (internal) tarmoqda — hech qanday `ports:` yo'q.
+# Django `web` tarmog'ida `harakat-django:8000` nomi bilan nginx'ga ko'rinadi (tashqariga ochilmaydi).
+#   docker network create web     (serverda bir marta)
+name: harakat-backend
+
+services:
+  django:
+    build:
+      context: .
+    image: harakat/django:latest
+    container_name: harakat-django
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - media:/app/media
+    networks: [web, internal]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  db:
+    image: postgres:16-alpine
+    container_name: harakat-db
+    restart: unless-stopped
+    # Faqat kerakli o'zgaruvchilar (django sirlari db konteynerga o'tmaydi); qiymatlar shu papkadagi .env dan
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?.env da POSTGRES_DB ni belgilang}
+      POSTGRES_USER: ${POSTGRES_USER:?.env da POSTGRES_USER ni belgilang}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?.env da POSTGRES_PASSWORD ni belgilang}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  redis:
+    image: redis:7-alpine
+    container_name: harakat-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    networks: [internal]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+volumes:
+  pgdata:
+    name: harakat_pgdata
+  redisdata:
+    name: harakat_redisdata
+  media:
+    name: harakat_media
+
+networks:
+  web:
+    external: true
+    name: web
+  # internal: true — bu tarmoqdan tashqariga (internetga) chiqib bo'lmaydi; db/redis butunlay yopiq.
+  internal:
+    internal: true

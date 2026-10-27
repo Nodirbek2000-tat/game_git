@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+id_*
+*.sql
+*.sql.gz
+*.sqlite3
+backups/
+
+# python
+venv/
+.venv/
+__pycache__/
+*.pyc
+staticfiles/
+media/
+.pytest_cache/
