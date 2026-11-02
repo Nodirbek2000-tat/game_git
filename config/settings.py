@@ -51,7 +51,7 @@ def _env_list(name: str, default: str = "") -> list[str]:
 
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
-# Aniq originlar ro'yxati (sxema bilan): https://uzbekyoshlari.uz,https://www.uzbekyoshlari.uz
+# Aniq originlar ro'yxati (sxema bilan): https://moveandplay.uz,https://www.moveandplay.uz
 CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 
 
