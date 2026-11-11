@@ -26,6 +26,29 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
 
+  # Telegram statistika boti (/start -> kim, necha marta kirdi, qaysi o'yin o'ynaldi). Shu image, boshqa buyruq.
+  # Telegram'ga o'zi ulanadi (long polling): port ochilmaydi. .env: TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_IDS
+  bot:
+    image: harakat/django:latest
+    container_name: harakat-bot
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: ["python", "manage.py", "stats_bot"]
+    depends_on:
+      db:
+        condition: service_healthy
+      django:
+        condition: service_started
+    # web = internetga chiqish (api.telegram.org), internal = db
+    networks: [web, internal]
+    healthcheck:
+      disable: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
   db:
     image: postgres:16-alpine
     container_name: harakat-db
