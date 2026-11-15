@@ -5,7 +5,6 @@ from datetime import datetime, timezone as dt_tz
 import pytest
 from django.test import Client
 
-from stats.bot import BUTTON, reply_for
 from stats.models import Play, Visit
 from stats.report import build_report, today
 
@@ -90,10 +89,3 @@ def test_today_is_tashkent_time():
     # 20:30 UTC = 01:30 the next day in Tashkent (UTC+5)
     assert str(today(datetime(2026, 11, 11, 20, 30, tzinfo=dt_tz.utc))) == "2026-11-12"
 
-
-def test_bot_answers_only_admins():
-    assert "statistikasi" in reply_for(42, "/start", {42})
-    assert "statistikasi" in reply_for(42, BUTTON, {42})
-    other = reply_for(7, "/start", {42})
-    assert "faqat admin" in other and "7" in other
-    assert reply_for(42, "salom", {42}) is None

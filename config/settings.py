@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'stats',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -181,6 +182,14 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "0" if DEBUG else "3600"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
 SECURE_HSTS_PRELOAD = _env_bool("DJANGO_HSTS_PRELOAD", False)
+
+# --- Akkauntlar va Telegram bot (game_bot) ---
+# Bot backendga shu kalit bilan ulanadi (X-Bot-Key). Bo'sh bo'lsa bot API o'chiq. Ikkala .env da bir xil bo'lsin.
+BOT_API_KEY = os.environ.get("BOT_API_KEY", "")
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "moveandplay_bot")
+SITE_URL = os.environ.get("SITE_URL", "https://moveandplay.uz")
+# Shu Telegram ID lar /start bosganda avtomatik admin bo'ladi (vergul bilan)
+ADMIN_TELEGRAM_IDS = [int(x) for x in _env_list("ADMIN_TELEGRAM_IDS") if x.lstrip("-").isdigit()]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

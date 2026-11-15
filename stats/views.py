@@ -7,6 +7,8 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from accounts.auth import device_from
+
 from .models import Play, Visit
 from .report import today
 
@@ -34,11 +36,13 @@ def event(request: HttpRequest) -> HttpResponse:
     d = today()
     if Visit.objects.filter(vid=vid, day=d).count() + Play.objects.filter(vid=vid, day=d).count() >= DAY_LIMIT:
         return HttpResponse(status=204)
+    dev = device_from(request)
+    user = dev.user if dev else None
     if kind == "visit":
-        Visit.objects.create(vid=vid, day=d)
+        Visit.objects.create(vid=vid, day=d, user=user)
     else:
         slug = str(data.get("slug", ""))
         if not SLUG.match(slug):
             return JsonResponse({"ok": False}, status=400)
-        Play.objects.create(vid=vid, slug=slug, day=d)
+        Play.objects.create(vid=vid, slug=slug, day=d, user=user)
     return HttpResponse(status=204)
