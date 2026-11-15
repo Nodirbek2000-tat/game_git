@@ -1,4 +1,5 @@
-"""Site API: sign up / sign in (password or Telegram), the current user, the public config and the admin panel."""
+"""Site API: sign in (password or Telegram), the current user, the public config and the admin panel. There is no sign-up here:
+a new account is made by the Telegram bot (/start), a kindergarten account by an admin."""
 
 import secrets
 
@@ -11,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .auth import USERNAME, LimitError, User, admin_required, auth_required, body, device_name, err, issue_device, me, profile_of
-from .models import ROLE_ADMIN, ROLE_BOGCHA, ROLE_USER, ROLES, LoginCode, Payment, Profile, SiteSettings
+from .models import ROLE_ADMIN, ROLE_BOGCHA, ROLE_USER, ROLES, LoginCode, Payment, SiteSettings
 from .services import create_bogcha, decide_payment, new_password, stats
 
 LIMIT_MSG = "Bu bog‘cha akkauntida 10 ta qurilma ulangan. Admin bilan bog‘laning."
@@ -46,24 +47,6 @@ def config(request: HttpRequest) -> JsonResponse:
             "botUsername": settings.BOT_USERNAME,
         }
     )
-
-
-@csrf_exempt
-@require_POST
-def register(request: HttpRequest) -> JsonResponse:
-    d = body(request)
-    username = str(d.get("username", "")).strip()
-    password = str(d.get("password", ""))
-    name = str(d.get("name", "")).strip()[:120]
-    if not USERNAME.match(username):
-        return err("Login 3–30 belgi: lotin harflari, raqam, _ yoki .")
-    if len(password) < 6 or len(password) > 128:
-        return err("Parol kamida 6 belgi bo‘lsin")
-    if User.objects.filter(username__iexact=username).exists():
-        return err("Bu login band, boshqasini tanlang", 409)
-    user = User.objects.create_user(username=username, password=password)
-    Profile.objects.create(user=user, name=name)
-    return _signed_in(request, user)
 
 
 @csrf_exempt

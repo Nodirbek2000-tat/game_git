@@ -4,7 +4,6 @@ from . import bot_api, views
 
 urlpatterns = [
     path("config", views.config),
-    path("auth/register", views.register),
     path("auth/login", views.login),
     path("auth/telegram", views.telegram),
     path("auth/logout", views.logout),

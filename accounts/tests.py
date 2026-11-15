@@ -39,7 +39,10 @@ def call(client, method, url, data=None, token=None, bot=False):
 
 
 def register(c, username="ali", password="secret12"):
-    return call(c, "post", "/api/auth/register", {"username": username, "password": password, "name": "Ali"})
+    """an account (made by the bot or an admin) + signing in with its password"""
+    user = User.objects.create_user(username=username, password=password)
+    Profile.objects.create(user=user, name="Ali")
+    return call(c, "post", "/api/auth/login", {"username": username, "password": password})
 
 
 # ------------------------------------------------------------------------------------------- password sign-in
@@ -58,15 +61,14 @@ def test_register_login_me_logout():
     assert call(c, "get", "/api/me", token=d["token"])[0] == 200  # the other device is still signed in
 
 
-@pytest.mark.parametrize("body,status", [({"username": "a", "password": "secret12"}, 400), ({"username": "bob", "password": "123"}, 400)])
-def test_register_validation(body, status):
-    assert call(Client(), "post", "/api/auth/register", body)[0] == status
+def test_there_is_no_sign_up_on_the_site():
+    assert call(Client(), "post", "/api/auth/register", {"username": "bob", "password": "secret12"})[0] == 404
+    assert not User.objects.filter(username="bob").exists()
 
 
-def test_register_taken_and_wrong_password_and_lockout():
+def test_wrong_password_and_lockout():
     c = Client()
     register(c)
-    assert register(c, "Ali")[0] == 409
     for _ in range(8):
         assert call(c, "post", "/api/auth/login", {"username": "ali", "password": "wrong"})[0] == 401
     assert call(c, "post", "/api/auth/login", {"username": "ali", "password": "secret12"})[0] == 429
