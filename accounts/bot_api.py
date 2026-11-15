@@ -2,15 +2,14 @@
 login/password, premium payments, the admins, the morning message recipients and the statistics."""
 
 from django.conf import settings
-from django.db import IntegrityError, transaction
 from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from .auth import User, body, bot_required, env_admin, err, make_admin_if_listed, me, profile_of
+from .auth import body, bot_required, env_admin, err, me, profile_of
 from .models import ROLE_ADMIN, LoginCode, Payment, Profile, SiteSettings
-from .services import decide_payment, set_credentials, stats_text
+from .services import decide_payment, set_credentials, stats_text, telegram_profile
 
 
 def _tg(d: dict) -> int | None:
@@ -40,28 +39,9 @@ def start(request: HttpRequest) -> JsonResponse:
     tg = _tg(d)
     if tg is None:
         return err("tg_id")
-    name = " ".join(str(d.get(k, "") or "").strip() for k in ("first_name", "last_name")).strip()[:120]
-    tg_username = str(d.get("username", "") or "")[:64]
-    p = _profile(tg)
-    created = False
-    if p is None:
-        try:
-            with transaction.atomic():
-                user = User.objects.create_user(username=f"tg{tg}")
-                user.set_unusable_password()
-                user.save()
-                p = Profile.objects.create(user=user, telegram_id=tg, telegram_username=tg_username, name=name, bot_active=True)
-                created = True
-        except IntegrityError:
-            p = _profile(tg)
+    p, created = telegram_profile(tg, d.get("first_name"), d.get("last_name"), d.get("username"), bot_active=True)
     if p is None:
         return err("retry", 409)
-    p.telegram_username = tg_username
-    if name and not p.name:
-        p.name = name
-    p.bot_active = True
-    p.save()
-    make_admin_if_listed(p)
     login = None
     payload = str(d.get("payload", "") or "")
     if payload.startswith("login_"):

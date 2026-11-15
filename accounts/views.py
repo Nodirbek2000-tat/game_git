@@ -13,7 +13,8 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from .auth import USERNAME, LimitError, User, admin_required, auth_required, body, device_name, err, issue_device, me, profile_of
 from .models import ROLE_ADMIN, ROLE_BOGCHA, ROLE_USER, ROLES, LoginCode, Payment, SiteSettings
-from .services import create_bogcha, decide_payment, new_password, stats
+from .services import create_bogcha, decide_payment, new_password, stats, telegram_profile
+from .webapp import verify_init_data
 
 LIMIT_MSG = "Bu bog‘cha akkauntida 10 ta qurilma ulangan. Admin bilan bog‘laning."
 # wrong passwords allowed per login and per address in 15 minutes
@@ -86,6 +87,19 @@ def telegram(request: HttpRequest) -> JsonResponse:
     user = lc.user
     lc.delete()
     return _signed_in(request, user)
+
+
+@csrf_exempt
+@require_POST
+def webapp(request: HttpRequest) -> JsonResponse:
+    """Inside the Telegram Mini App: sign in with Telegram's signed initData (a new Telegram user gets an account)."""
+    user = verify_init_data(str(body(request).get("initData", "")), settings.TELEGRAM_BOT_TOKEN)
+    if user is None:
+        return err("Telegram ma’lumoti tasdiqlanmadi", 401)
+    p, _ = telegram_profile(user["id"], user.get("first_name"), user.get("last_name"), user.get("username"))
+    if p is None:
+        return err("Qayta urinib ko‘ring", 409)
+    return _signed_in(request, p.user)
 
 
 @csrf_exempt

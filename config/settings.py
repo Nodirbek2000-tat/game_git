@@ -187,6 +187,8 @@ SECURE_HSTS_PRELOAD = _env_bool("DJANGO_HSTS_PRELOAD", False)
 # Bot backendga shu kalit bilan ulanadi (X-Bot-Key). Bo'sh bo'lsa bot API o'chiq. Ikkala .env da bir xil bo'lsin.
 BOT_API_KEY = os.environ.get("BOT_API_KEY", "")
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "moveandplay_bot")
+# Telegram Mini App ichida avtomatik kirish uchun (Telegram imzosini tekshirish). game_bot dagi BOT_TOKEN bilan bir xil.
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 SITE_URL = os.environ.get("SITE_URL", "https://moveandplay.uz")
 # Shu Telegram ID lar /start bosganda avtomatik admin bo'ladi (vergul bilan)
 ADMIN_TELEGRAM_IDS = [int(x) for x in _env_list("ADMIN_TELEGRAM_IDS") if x.lstrip("-").isdigit()]

@@ -243,3 +243,45 @@ def test_stats_event_links_the_signed_in_user():
     assert r.status_code == 204
     assert Play.objects.get().user.username == "ali"
     assert Payment.objects.count() == 0
+
+
+# ------------------------------------------------------------------------------------------- Telegram Mini App
+
+
+def _init_data(token, user, auth_date=None, tamper=False):
+    import hashlib
+    import hmac
+    import time
+    from urllib.parse import urlencode
+
+    data = {"auth_date": str(auth_date or int(time.time())), "query_id": "AAH", "user": json.dumps(user, separators=(",", ":"))}
+    check = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
+    secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    data["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+    if tamper:
+        data["user"] = data["user"].replace("Lola", "Hacker")
+    return urlencode(data)
+
+
+def test_mini_app_signs_in_with_telegram_signature(settings):
+    import time
+
+    settings.TELEGRAM_BOT_TOKEN = "123:ABC"
+    c = Client()
+    user = {"id": 4242, "first_name": "Lola", "username": "lola"}
+    s, d = call(c, "post", "/api/auth/webapp", {"initData": _init_data("123:ABC", user)})
+    assert s == 200 and d["token"] and d["me"]["telegram"] is True and d["me"]["name"] == "Lola"
+    assert Profile.objects.get(telegram_id=4242).user.username == "tg4242"
+    # the same Telegram user again: the same account
+    call(c, "post", "/api/auth/webapp", {"initData": _init_data("123:ABC", user)})
+    assert Profile.objects.filter(telegram_id=4242).count() == 1
+    # forged, signed with another token, too old, or empty: refused
+    assert call(c, "post", "/api/auth/webapp", {"initData": _init_data("123:ABC", user, tamper=True)})[0] == 401
+    assert call(c, "post", "/api/auth/webapp", {"initData": _init_data("999:XYZ", user)})[0] == 401
+    assert call(c, "post", "/api/auth/webapp", {"initData": _init_data("123:ABC", user, auth_date=int(time.time()) - 2 * 86400)})[0] == 401
+    assert call(c, "post", "/api/auth/webapp", {"initData": ""})[0] == 401
+
+
+def test_mini_app_sign_in_is_off_without_a_token(settings):
+    settings.TELEGRAM_BOT_TOKEN = ""
+    assert call(Client(), "post", "/api/auth/webapp", {"initData": _init_data("", {"id": 1})})[0] == 401

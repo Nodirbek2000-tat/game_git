@@ -6,6 +6,7 @@ urlpatterns = [
     path("config", views.config),
     path("auth/login", views.login),
     path("auth/telegram", views.telegram),
+    path("auth/webapp", views.webapp),
     path("auth/logout", views.logout),
     path("me", views.whoami),
     # admin panel

@@ -4,14 +4,14 @@ import secrets
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
 from stats.models import Play, Visit
 from stats.report import GAME_TITLES, TZ, today
 
-from .auth import USERNAME, profile_of
+from .auth import USERNAME, make_admin_if_listed, profile_of
 from .models import ROLE_ADMIN, ROLE_BOGCHA, Device, Payment, Profile
 
 User = get_user_model()
@@ -33,6 +33,34 @@ def free_username(base: str) -> str:
         i += 1
         name = f"{base}{i}"
     return name
+
+
+def telegram_profile(tg_id: int, first_name=None, last_name=None, username=None, bot_active: bool | None = None) -> tuple[Profile | None, bool]:
+    """The account of a Telegram user, made on first sight (login "tg<id>", no password). Returns (profile, created)."""
+    name = " ".join(str(x or "").strip() for x in (first_name, last_name)).strip()[:120]
+    tg_username = str(username or "")[:64]
+    p = Profile.objects.select_related("user").filter(telegram_id=tg_id).first()
+    created = False
+    if p is None:
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(username=f"tg{tg_id}")
+                user.set_unusable_password()
+                user.save()
+                p = Profile.objects.create(user=user, telegram_id=tg_id, telegram_username=tg_username, name=name, bot_active=bool(bot_active))
+                created = True
+        except IntegrityError:
+            p = Profile.objects.select_related("user").filter(telegram_id=tg_id).first()
+    if p is None:
+        return None, False
+    p.telegram_username = tg_username or p.telegram_username
+    if name and not p.name:
+        p.name = name
+    if bot_active is not None:
+        p.bot_active = bot_active
+    p.save()
+    make_admin_if_listed(p)
+    return p, created
 
 
 def set_credentials(user) -> tuple[str, str]:
