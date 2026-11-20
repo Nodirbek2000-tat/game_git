@@ -17,6 +17,7 @@ GAME_TITLES = {
     "mashina": "Mashina haydash",
     "poyga": "Shahar simulyatori",
     "boks": "Boks",
+    "nurli-tor": "Nurli tor",
     "fitnes": "Fitnes",
     "pufakchalar": "Pufakchalar",
     "hayvonlar": "Hayvonlar",
